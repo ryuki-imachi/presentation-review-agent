@@ -1,0 +1,17 @@
+[project]
+name = "my-project"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "bedrock-agentcore",
+    "boto3",
+    "botocore[crt]",
+    "python-dotenv",
+    "strands-agents",
+]
+
+[dependency-groups]
+dev = ["ruff", "pytest"]
+
+[tool.ruff]
+line-length = 120
