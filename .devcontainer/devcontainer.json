@@ -1,0 +1,27 @@
+{
+  "name": "AI Agent Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.codeActionsOnSave": { "source.fixAll": "always" }
+        },
+        "editor.formatOnSave": true,
+        "python.defaultInterpreterPath": ".venv/bin/python",
+        "chat.disableAIFeatures": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff"
+      ]
+    }
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind"
+  ],
+  "postCreateCommand": "uv sync"
+}
