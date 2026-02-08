@@ -1,0 +1,35 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run amplify:check && vite",
+    "build": "npm run amplify:check && tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "amplify:check": "node -e \"const fs=require('fs'); if(!fs.existsSync('amplify_outputs.json')){console.warn('amplify_outputs.json not found. Run npx ampx sandbox first. Using empty config.');fs.writeFileSync('amplify_outputs.json','{}')}\""
+  },
+  "dependencies": {
+    "aws-amplify": "^6.16.2",
+    "@aws-amplify/ui-react": "^6.13.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@aws-amplify/backend": "^1.19.0",
+    "@aws-amplify/backend-cli": "^1.8.2",
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.2.4"
+  }
+}
