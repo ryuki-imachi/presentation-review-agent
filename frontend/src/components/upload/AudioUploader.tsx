@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import type { DragEvent, ChangeEvent } from "react";
-import { useAudioUpload } from "../../hooks/useAudioUpload";
+import type { AudioUploadState, AudioUploadActions } from "../../hooks/useAudioUpload";
 import "./AudioUploader.css";
 
 function formatFileSize(bytes: number): string {
@@ -11,9 +11,9 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-export function AudioUploader() {
-  const { file, status, progress, uploadedPath, error, selectFile, upload, reset } =
-    useAudioUpload();
+type Props = AudioUploadState & AudioUploadActions;
+
+export function AudioUploader({ file, status, progress, uploadedPath, error, selectFile, upload, reset }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
   const [isDragOver, setIsDragOver] = useState(false);
