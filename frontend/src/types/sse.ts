@@ -62,6 +62,8 @@ export type AnalysisResultData = {
   strengths: string[];
   improvements: string[];
   agent_cost: AgentExecutionCost;
+  file_name?: string;
+  file_path?: string;
   [key: string]: unknown;
 };
 

@@ -84,6 +84,12 @@
   margin: 1rem 0 0.5rem;
 }
 
+.analysis-result__file {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0 0 0.5rem;
+}
+
 .analysis-result__summary {
   font-size: 0.95rem;
   color: #333;
@@ -110,4 +116,11 @@
   font-size: 0.8rem;
   color: #999;
   text-align: right;
+}
+
+/* アクションボタン */
+.analysis-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
 }

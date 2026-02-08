@@ -121,10 +121,14 @@ export function useSSEChat(): SSEChatState & SSEChatActions {
         }
       }
 
-      // ストリーム正常終了 — まだ done/error でなければ done にする
-      setState((prev) =>
-        prev.status === "streaming" ? { ...prev, status: "done" } : prev,
-      );
+      // ストリーム終了 — completed 受信済みなら done、未受信なら error
+      setState((prev) => {
+        if (prev.status !== "streaming") return prev;
+        const hasCompleted = prev.events.some((e) => e.status === "completed");
+        return hasCompleted
+          ? { ...prev, status: "done" }
+          : { ...prev, status: "error", error: "ストリームが途中で切断されました。" };
+      });
     } catch (err) {
       if (controller.signal.aborted) return;
       const message =
