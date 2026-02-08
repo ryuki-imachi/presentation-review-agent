@@ -90,7 +90,9 @@ async def invoke(payload: dict):
         run_id=run_id,
         owner_sub=owner_sub,
         message="分析が完了しました",
-        summary=f"エコーエージェントによるモック分析結果です。対象ファイル: {s3_key}",
+        summary="エコーエージェントによるモック分析結果です。",
+        file_name=s3_key.rsplit("/", 1)[-1],
+        file_path=s3_key,
         strengths=[
             "明確な導入部でテーマを提示している",
             "データを用いた根拠のある説明",

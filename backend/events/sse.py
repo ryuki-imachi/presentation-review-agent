@@ -104,16 +104,22 @@ def new_analysis_result_event(
     strengths: list[str],
     improvements: list[str],
     agent_cost: AgentExecutionCostSummary,
+    file_name: str | None = None,
+    file_path: str | None = None,
     message: str | None = None,
     event_id: str | None = None,
     emitted_at: str | None = None,
 ) -> dict[str, Any]:
-    data = {
+    data: dict[str, Any] = {
         "summary": summary,
         "strengths": strengths,
         "improvements": improvements,
         "agent_cost": agent_cost.to_dict(),
     }
+    if file_name is not None:
+        data["file_name"] = file_name
+    if file_path is not None:
+        data["file_path"] = file_path
     return new_analysis_event(
         event=AnalysisEventName.RESULT,
         run_id=run_id,
