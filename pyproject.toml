@@ -1,9 +1,10 @@
 [project]
-name = "my-project"
+name = "presentation-review-agent"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "bedrock-agentcore",
+    "bedrock-agentcore-starter-toolkit>=0.2.10",
     "boto3",
     "botocore[crt]",
     "python-dotenv",
