@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run amplify:check && vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run amplify:check && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "amplify:check": "node -e \"const fs=require('fs'); if(!fs.existsSync('amplify_outputs.json')){console.warn('amplify_outputs.json not found. Run npx ampx sandbox first. Using empty config.');fs.writeFileSync('amplify_outputs.json','{}')}\""
