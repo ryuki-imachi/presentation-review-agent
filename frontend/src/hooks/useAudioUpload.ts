@@ -74,7 +74,13 @@ export function useAudioUpload(): AudioUploadState & AudioUploadActions {
   const selectFile = useCallback((file: File): string | null => {
     const validationError = validateFile(file);
     if (validationError) {
-      setState((prev) => ({ ...prev, error: validationError }));
+      setState({
+        file: null,
+        status: "idle",
+        progress: 0,
+        uploadedPath: null,
+        error: validationError,
+      });
       return validationError;
     }
     setState({

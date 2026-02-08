@@ -27,6 +27,12 @@
   background-color: #eff6ff;
 }
 
+.drop-zone--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .drop-zone__text {
   margin: 0 0 0.5rem;
   font-size: 1rem;

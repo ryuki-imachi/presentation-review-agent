@@ -18,11 +18,14 @@ export function AudioUploader() {
   const dragCounterRef = useRef(0);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  const isUploading = status === "uploading";
+
   const handleFile = useCallback(
     (f: File) => {
+      if (isUploading) return;
       selectFile(f);
     },
-    [selectFile],
+    [selectFile, isUploading],
   );
 
   const handleDragEnter = useCallback((e: DragEvent) => {
@@ -37,7 +40,7 @@ export function AudioUploader() {
   const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    dragCounterRef.current -= 1;
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
     if (dragCounterRef.current === 0) {
       setIsDragOver(false);
     }
@@ -76,15 +79,16 @@ export function AudioUploader() {
   );
 
   const handleClickZone = useCallback(() => {
+    if (isUploading) return;
     inputRef.current?.click();
-  }, []);
+  }, [isUploading]);
 
   return (
     <section className="audio-uploader">
       <h2>音声ファイルをアップロード</h2>
 
       <div
-        className={`drop-zone ${isDragOver ? "drop-zone--active" : ""}`}
+        className={`drop-zone ${isDragOver ? "drop-zone--active" : ""} ${isUploading ? "drop-zone--disabled" : ""}`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
