@@ -3,12 +3,19 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
   "customizations": {
     "vscode": {
       "settings": {
         "[python]": {
           "editor.defaultFormatter": "charliermarsh.ruff",
-          "editor.codeActionsOnSave": { "source.fixAll": "always" }
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "always"
+          }
         },
         "editor.formatOnSave": true,
         "python.defaultInterpreterPath": ".venv/bin/python",
@@ -20,6 +27,7 @@
       ]
     }
   },
+  "forwardPorts": [5173],
   "mounts": [
     "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind"
   ],

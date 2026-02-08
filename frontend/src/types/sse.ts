@@ -118,14 +118,27 @@ export function isAnalysisEvent(value: unknown): value is AnalysisEvent {
   if (typeof value.emitted_at !== "string" || value.emitted_at.length === 0)
     return false;
 
+  if (value.id !== undefined && typeof value.id !== "string") return false;
+  if (value.message !== undefined && typeof value.message !== "string")
+    return false;
+
   if (value.error !== undefined) {
     if (!isRecord(value.error)) return false;
     if (typeof value.error.code !== "string") return false;
     if (typeof value.error.detail !== "string") return false;
   }
 
-  if (value.event === "analysis.partial" && value.status !== "partial")
-    return false;
+  if (value.event === "analysis.partial") {
+    if (value.status !== "partial") return false;
+    if (value.data !== undefined) {
+      if (!isRecord(value.data)) return false;
+      if (
+        value.data.partial_summary !== undefined &&
+        typeof value.data.partial_summary !== "string"
+      )
+        return false;
+    }
+  }
 
   if (value.event === "analysis.result") {
     if (value.status !== "completed" || value.step !== "finalize") return false;
