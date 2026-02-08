@@ -47,7 +47,11 @@ export function useSSEChat(): SSEChatState & SSEChatActions {
       if (!idToken) {
         throw new Error("認証トークンが取得できませんでした。再ログインしてください。");
       }
-      const ownerSub = idToken.payload.sub as string;
+      // S3パスは identityId を使っているので、sub ではなく identityId を送る
+      const ownerSub = session.identityId;
+      if (!ownerSub) {
+        throw new Error("identityId が取得できませんでした。再ログインしてください。");
+      }
 
       const response = await fetch("/api/analyze", {
         method: "POST",
