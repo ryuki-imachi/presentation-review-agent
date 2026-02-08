@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npm run amplify:check && vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "amplify:check": "node -e \"const fs=require('fs'); if(!fs.existsSync('amplify_outputs.json')){console.warn('amplify_outputs.json not found. Run npx ampx sandbox first. Using empty config.');fs.writeFileSync('amplify_outputs.json','{}')}\""
   },
   "dependencies": {
     "aws-amplify": "^6.16.2",
