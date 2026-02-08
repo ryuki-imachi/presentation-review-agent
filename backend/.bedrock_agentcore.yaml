@@ -1,0 +1,3 @@
+runtime:
+  name: presentation-review-agent
+  entry_point: main.py

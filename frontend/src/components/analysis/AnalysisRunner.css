@@ -1,0 +1,113 @@
+.analysis-runner {
+  max-width: 480px;
+  margin: 2rem auto;
+}
+
+.analysis-runner h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+/* ステップインジケーター */
+.step-indicator {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1rem 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  gap: 0.4rem;
+}
+
+.step__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  transition: background 0.3s;
+}
+
+.step--active .step__dot {
+  background: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+}
+
+.step--done .step__dot {
+  background: #16a34a;
+}
+
+.step__label {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.step--active .step__label {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.step--done .step__label {
+  color: #16a34a;
+}
+
+/* メッセージ */
+.analysis-message {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.analysis-message--error {
+  color: #dc2626;
+}
+
+/* 結果 */
+.analysis-result {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.analysis-result h3 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+}
+
+.analysis-result h4 {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.analysis-result__summary {
+  font-size: 0.95rem;
+  color: #333;
+  line-height: 1.6;
+}
+
+.analysis-result__list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+.analysis-result__list--good li::marker {
+  color: #16a34a;
+}
+
+.analysis-result__list--improve li::marker {
+  color: #ea580c;
+}
+
+.analysis-result__cost {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #999;
+  text-align: right;
+}
