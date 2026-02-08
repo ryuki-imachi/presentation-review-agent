@@ -1,0 +1,12 @@
+default_agent: presentation-review-agent
+agents:
+  presentation-review-agent:
+    name: presentation-review-agent
+    entrypoint: main.py
+    deployment_type: container
+    aws:
+      execution_role: null
+      execution_role_auto_create: true
+      s3_auto_create: true
+      region: null
+      account: null
