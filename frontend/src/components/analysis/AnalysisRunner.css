@@ -111,6 +111,39 @@
   color: #ea580c;
 }
 
+/* 文字起こし折りたたみ */
+.analysis-result__transcript {
+  margin-top: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.analysis-result__transcript summary {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  background: #f3f4f6;
+}
+
+.analysis-result__transcript summary:hover {
+  background: #e5e7eb;
+}
+
+.analysis-result__transcript-text {
+  margin: 0;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #fff;
+}
+
 .analysis-result__cost {
   margin-top: 1rem;
   font-size: 0.8rem;

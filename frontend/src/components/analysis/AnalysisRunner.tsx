@@ -64,6 +64,11 @@ function buildMarkdown(resultData: AnalysisResultData, runId: string | null): st
   for (const s of resultData.improvements) {
     lines.push(`- ${s}`);
   }
+  if (resultData.transcript) {
+    lines.push("");
+    lines.push("## 文字起こし全文");
+    lines.push(resultData.transcript);
+  }
   lines.push("");
   lines.push(`---`);
   lines.push(`推定コスト: $${resultData.agent_cost.total_usd.toFixed(4)}`);
@@ -176,6 +181,15 @@ export function AnalysisRunner({ s3Key }: Props) {
               <li key={i}>{s}</li>
             ))}
           </ul>
+
+          {resultData.transcript && (
+            <details className="analysis-result__transcript">
+              <summary>文字起こし全文を表示</summary>
+              <pre className="analysis-result__transcript-text">
+                {resultData.transcript}
+              </pre>
+            </details>
+          )}
 
           <p className="analysis-result__cost">
             推定コスト: ${resultData.agent_cost.total_usd.toFixed(4)}
