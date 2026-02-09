@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 from dataclasses import dataclass
 
 import boto3
@@ -90,8 +91,9 @@ async def transcribe_audio(s3_key: str, bucket: str) -> TranscribeResult:
             raise
 
     # --- ポーリング ---
-    max_polls = 120
     poll_interval = 2
+    max_wait_seconds = int(os.getenv("TRANSCRIBE_MAX_WAIT_SECONDS", "600"))
+    max_polls = max(1, max_wait_seconds // poll_interval)
     for i in range(max_polls):
         resp = transcribe.get_transcription_job(TranscriptionJobName=job_name)
         status = resp["TranscriptionJob"]["TranscriptionJobStatus"]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from uuid import uuid4
@@ -116,7 +117,17 @@ async def invoke(payload: dict):
             message="文字起こし済みデータを使用",
         )
 
-    # --- Step 3: partial / content ---
+    # --- Step 3: running / speech（Phase 5 で実装予定、スキップ） ---
+    yield new_analysis_event(
+        event=AnalysisEventName.STATUS,
+        run_id=run_id,
+        owner_sub=owner_sub,
+        status=AnalysisStatus.RUNNING,
+        step=AnalysisStep.SPEECH,
+        message="話し方分析をスキップ（Phase 5 で実装予定）",
+    )
+
+    # --- Step 4: partial / content ---
     preview = result.transcript[:200] + ("…" if len(result.transcript) > 200 else "")
     yield new_analysis_event(
         event=AnalysisEventName.PARTIAL,
@@ -127,8 +138,9 @@ async def invoke(payload: dict):
         message="文字起こし完了",
         data={"partial_summary": preview},
     )
+    await asyncio.sleep(0.5)
 
-    # --- Step 4: completed / finalize ---
+    # --- Step 5: completed / finalize ---
     # Transcribe コスト概算: $0.024/分
     transcribe_cost_usd = (result.duration_seconds / 60) * 0.024
 
