@@ -64,6 +64,8 @@ export type AnalysisResultData = {
   agent_cost: AgentExecutionCost;
   file_name?: string;
   file_path?: string;
+  transcript?: string;
+  transcript_s3_key?: string;
   [key: string]: unknown;
 };
 
