@@ -106,6 +106,8 @@ def new_analysis_result_event(
     agent_cost: AgentExecutionCostSummary,
     file_name: str | None = None,
     file_path: str | None = None,
+    transcript: str | None = None,
+    transcript_s3_key: str | None = None,
     message: str | None = None,
     event_id: str | None = None,
     emitted_at: str | None = None,
@@ -120,6 +122,10 @@ def new_analysis_result_event(
         data["file_name"] = file_name
     if file_path is not None:
         data["file_path"] = file_path
+    if transcript is not None:
+        data["transcript"] = transcript
+    if transcript_s3_key is not None:
+        data["transcript_s3_key"] = transcript_s3_key
     return new_analysis_event(
         event=AnalysisEventName.RESULT,
         run_id=run_id,
