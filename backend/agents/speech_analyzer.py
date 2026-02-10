@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from strands import Agent, tool
+from strands import Agent
 from strands.models import BedrockModel
 
 HAIKU_MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
@@ -32,27 +32,12 @@ SYSTEM_PROMPT = """\
 各リストは 2-4 項目にしてください。
 """
 
-# モジュールレベルで最後の実行結果を保持（コスト追跡用）
-_last_result = None
 
-
-@tool
-def speech_analyzer(transcript: str) -> str:
-    """プレゼンテーションの話し方を分析する。文字起こしテキストから話速・フィラー・間の使い方・言い回しの明瞭さを評価する。
-
-    Args:
-        transcript: 文字起こしテキスト全文
-    """
-    global _last_result
+def run_speech_analysis(transcript: str):
+    """話し方分析を実行し、Agent の結果オブジェクトを返す"""
     agent = Agent(
         system_prompt=SYSTEM_PROMPT,
         model=BedrockModel(model_id=HAIKU_MODEL_ID, region_name="us-east-1"),
         callback_handler=None,
     )
-    _last_result = agent(f"以下の文字起こしテキストの話し方を分析してください:\n\n{transcript}")
-    return str(_last_result)
-
-
-def get_last_result():
-    """最後の実行結果を返す（コスト追跡用）"""
-    return _last_result
+    return agent(f"以下の文字起こしテキストの話し方を分析してください:\n\n{transcript}")

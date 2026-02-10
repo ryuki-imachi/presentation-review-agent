@@ -7,22 +7,21 @@ import logging
 import re
 from dataclasses import dataclass
 
-from strands import Agent
+from strands import Agent, tool
 from strands.models import BedrockModel
 
-from agents.content_analyzer import content_analyzer, get_last_result as get_content_result
-from agents.speech_analyzer import speech_analyzer, get_last_result as get_speech_result
 from tools.cost_tracker import (
     AgentTokenUsage,
     calculate_total_cost,
     extract_usage_from_result,
 )
 from events.sse import AgentExecutionCostSummary
+from .speech_analyzer import HAIKU_MODEL_ID as SPEECH_MODEL_ID, run_speech_analysis
+from .content_analyzer import HAIKU_MODEL_ID as CONTENT_MODEL_ID, run_content_analysis
 
 logger = logging.getLogger(__name__)
 
 SONNET_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-HAIKU_MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 
 MAX_TRANSCRIPT_LENGTH = 50_000
 
@@ -90,6 +89,13 @@ def _parse_json_response(text: str) -> dict:
     raise ValueError(f"JSON をパースできませんでした: {text[:200]}")
 
 
+def _to_str_list(value: object) -> list[str]:
+    """値を list[str] に正規化"""
+    if not isinstance(value, list):
+        return [str(value)] if value else []
+    return [str(x) for x in value]
+
+
 async def run_orchestrator(transcript: str) -> OrchestratorResult:
     """Orchestrator Agent を実行し、統合分析結果を返す"""
     # テキスト長制限
@@ -100,6 +106,31 @@ async def run_orchestrator(transcript: str) -> OrchestratorResult:
             MAX_TRANSCRIPT_LENGTH,
         )
         transcript = transcript[:MAX_TRANSCRIPT_LENGTH]
+
+    # リクエストごとの usage 収集用（クロージャで共有）
+    sub_results: dict[str, object] = {}
+
+    @tool
+    def speech_analyzer(transcript: str) -> str:
+        """プレゼンテーションの話し方を分析する。文字起こしテキストから話速・フィラー・間の使い方・言い回しの明瞭さを評価する。
+
+        Args:
+            transcript: 文字起こしテキスト全文
+        """
+        result = run_speech_analysis(transcript)
+        sub_results["speech"] = result
+        return str(result)
+
+    @tool
+    def content_analyzer(transcript: str) -> str:
+        """プレゼンテーションの内容を分析する。文字起こしテキストから構成・論理性・具体性・言葉遣い・メッセージの明確さを評価する。
+
+        Args:
+            transcript: 文字起こしテキスト全文
+        """
+        result = run_content_analysis(transcript)
+        sub_results["content"] = result
+        return str(result)
 
     agent = Agent(
         system_prompt=ORCHESTRATOR_SYSTEM_PROMPT,
@@ -112,32 +143,23 @@ async def run_orchestrator(transcript: str) -> OrchestratorResult:
         f"以下のプレゼンテーションの文字起こしテキストを分析してください:\n\n{transcript}"
     )
 
-    # --- JSON パース ---
+    # --- JSON パース + 型正規化 ---
     parsed = _parse_json_response(str(result))
-    summary = parsed.get("summary", "分析結果を取得できませんでした。")
-    strengths = parsed.get("strengths", [])
-    improvements = parsed.get("improvements", [])
-
-    if not isinstance(strengths, list):
-        strengths = [str(strengths)]
-    if not isinstance(improvements, list):
-        improvements = [str(improvements)]
+    summary = str(parsed.get("summary", "分析結果を取得できませんでした"))
+    strengths = _to_str_list(parsed.get("strengths", []))
+    improvements = _to_str_list(parsed.get("improvements", []))
 
     # --- コスト計算 ---
     usages: list[AgentTokenUsage] = []
 
     # Orchestrator 自身
-    orch_usage = extract_usage_from_result("orchestrator", result, SONNET_MODEL_ID)
-    usages.append(orch_usage)
+    usages.append(extract_usage_from_result("orchestrator", result, SONNET_MODEL_ID))
 
-    # サブエージェント
-    speech_result = get_speech_result()
-    if speech_result is not None:
-        usages.append(extract_usage_from_result("speech_analyzer", speech_result, HAIKU_MODEL_ID))
-
-    content_result = get_content_result()
-    if content_result is not None:
-        usages.append(extract_usage_from_result("content_analyzer", content_result, HAIKU_MODEL_ID))
+    # サブエージェント（今回の実行で呼ばれた分のみ）
+    if "speech" in sub_results:
+        usages.append(extract_usage_from_result("speech_analyzer", sub_results["speech"], SPEECH_MODEL_ID))
+    if "content" in sub_results:
+        usages.append(extract_usage_from_result("content_analyzer", sub_results["content"], CONTENT_MODEL_ID))
 
     cost_summary = calculate_total_cost(usages)
 
