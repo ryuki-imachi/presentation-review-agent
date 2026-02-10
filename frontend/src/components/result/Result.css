@@ -1,0 +1,95 @@
+/* SummaryCard */
+.summary-card {
+  background: var(--color-gray-50);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.summary-card__label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+  margin: 0 0 0.5rem;
+}
+
+.summary-card__text {
+  font-size: 0.95rem;
+  color: var(--color-gray-800);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* StrengthsList / ImprovementsList */
+.result-section {
+  margin-bottom: 1.25rem;
+}
+
+.result-section__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+
+.result-section__title--good {
+  color: var(--color-success);
+}
+
+.result-section__title--improve {
+  color: var(--color-warning);
+}
+
+.result-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.result-list li {
+  line-height: 1.8;
+}
+
+.result-list--good li::marker {
+  color: var(--color-success);
+}
+
+.result-list--improve li::marker {
+  color: var(--color-warning);
+}
+
+/* AgentCostDisplay */
+.cost-display {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: var(--color-gray-400);
+  text-align: right;
+}
+
+.cost-display__summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.cost-display__summary:hover {
+  color: var(--color-gray-600);
+}
+
+.cost-display__breakdown {
+  margin-top: 0.5rem;
+  text-align: right;
+}
+
+.cost-display__breakdown-item {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  color: var(--color-gray-400);
+  line-height: 1.8;
+}
+
+.cost-display__breakdown-label {
+  color: var(--color-gray-600);
+}
