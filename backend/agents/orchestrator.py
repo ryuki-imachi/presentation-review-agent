@@ -108,7 +108,8 @@ async def run_orchestrator(transcript: str) -> OrchestratorResult:
         transcript = transcript[:MAX_TRANSCRIPT_LENGTH]
 
     # リクエストごとの usage 収集用（クロージャで共有）
-    sub_results: dict[str, object] = {}
+    # list にすることで同じ tool が複数回呼ばれても全結果を保持
+    sub_results: dict[str, list[object]] = {"speech": [], "content": []}
 
     @tool
     def speech_analyzer(transcript: str) -> str:
@@ -118,7 +119,7 @@ async def run_orchestrator(transcript: str) -> OrchestratorResult:
             transcript: 文字起こしテキスト全文
         """
         result = run_speech_analysis(transcript)
-        sub_results["speech"] = result
+        sub_results["speech"].append(result)
         return str(result)
 
     @tool
@@ -129,7 +130,7 @@ async def run_orchestrator(transcript: str) -> OrchestratorResult:
             transcript: 文字起こしテキスト全文
         """
         result = run_content_analysis(transcript)
-        sub_results["content"] = result
+        sub_results["content"].append(result)
         return str(result)
 
     agent = Agent(
@@ -155,11 +156,11 @@ async def run_orchestrator(transcript: str) -> OrchestratorResult:
     # Orchestrator 自身
     usages.append(extract_usage_from_result("orchestrator", result, SONNET_MODEL_ID))
 
-    # サブエージェント（今回の実行で呼ばれた分のみ）
-    if "speech" in sub_results:
-        usages.append(extract_usage_from_result("speech_analyzer", sub_results["speech"], SPEECH_MODEL_ID))
-    if "content" in sub_results:
-        usages.append(extract_usage_from_result("content_analyzer", sub_results["content"], CONTENT_MODEL_ID))
+    # サブエージェント（全呼び出し分を加算）
+    for r in sub_results["speech"]:
+        usages.append(extract_usage_from_result("speech_analyzer", r, SPEECH_MODEL_ID))
+    for r in sub_results["content"]:
+        usages.append(extract_usage_from_result("content_analyzer", r, CONTENT_MODEL_ID))
 
     cost_summary = calculate_total_cost(usages)
 
