@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useSSEChat } from "../../hooks/useSSEChat";
 import type { AnalysisEvent, AnalysisResultData, AnalysisStep } from "../../types";
+import { SummaryCard, StrengthsList, ImprovementsList, AgentCostDisplay } from "../result";
 import "./AnalysisRunner.css";
 
 const STEP_LABELS: Record<AnalysisStep, string> = {
@@ -154,33 +155,35 @@ export function AnalysisRunner({ s3Key }: Props) {
         <p className="analysis-message">{message}</p>
       )}
 
-      {/* エラー表示 */}
-      {status === "error" && errorDetail && (
-        <p className="analysis-message analysis-message--error">{errorDetail}</p>
+      {/* エラーセクション */}
+      {status === "error" && (
+        <div>
+          <p className="analysis-message analysis-message--error">
+            {errorDetail ?? "エラーが発生しました"}
+          </p>
+          <div className="analysis-actions">
+            <button
+              className="btn btn--primary"
+              onClick={() => startAnalysis(s3Key)}
+            >
+              再試行
+            </button>
+            <button className="btn btn--secondary" onClick={reset}>
+              リセット
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* 結果表示 */}
+      {/* 完了セクション */}
       {status === "done" && resultData && (
         <div className="analysis-result">
-          <h3>分析結果</h3>
           {resultData.file_name && (
             <p className="analysis-result__file">{resultData.file_name}</p>
           )}
-          <p className="analysis-result__summary">{resultData.summary}</p>
-
-          <h4>良い点</h4>
-          <ul className="analysis-result__list analysis-result__list--good">
-            {resultData.strengths.map((s, i) => (
-              <li key={i}>{s}</li>
-            ))}
-          </ul>
-
-          <h4>改善点</h4>
-          <ul className="analysis-result__list analysis-result__list--improve">
-            {resultData.improvements.map((s, i) => (
-              <li key={i}>{s}</li>
-            ))}
-          </ul>
+          <SummaryCard summary={resultData.summary} />
+          <StrengthsList items={resultData.strengths} />
+          <ImprovementsList items={resultData.improvements} />
 
           {resultData.transcript && (
             <details className="analysis-result__transcript">
@@ -191,26 +194,19 @@ export function AnalysisRunner({ s3Key }: Props) {
             </details>
           )}
 
-          <p className="analysis-result__cost">
-            推定コスト: ${resultData.agent_cost.total_usd.toFixed(4)}
-          </p>
-        </div>
-      )}
+          <AgentCostDisplay cost={resultData.agent_cost} />
 
-      {/* アクションボタン */}
-      {(status === "done" || status === "error") && (
-        <div className="analysis-actions">
-          {status === "done" && resultData && (
+          <div className="analysis-actions">
             <button
               className="btn btn--primary"
               onClick={() => handleDownload(resultData, runId)}
             >
               レポートをダウンロード
             </button>
-          )}
-          <button className="btn btn--secondary" onClick={reset}>
-            リセット
-          </button>
+            <button className="btn btn--secondary" onClick={reset}>
+              リセット
+            </button>
+          </div>
         </div>
       )}
     </section>

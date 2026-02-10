@@ -258,7 +258,7 @@ LLM 分析（Strands Agent）は Phase 5。
 
 ---
 
-## Phase 5: Strands Agent によるプレゼンテーション LLM 分析 — 実装中
+## Phase 5: Strands Agent によるプレゼンテーション LLM 分析 — 完了
 
 ### Context
 Phase 1-4 完了。音声アップロード → Transcribe 文字起こし → SSE 結果返却が動作する状態。
@@ -389,5 +389,25 @@ Step 3-5 の暫定部分を Orchestrator 呼び出しに置き換え。
 
 ---
 
-## Phase 6〜7: 未着手
-（Phase 5完了後に順次追記）
+## Phase 6: UI仕上げ — 完了
+
+### Context
+Phase 5 完了。LLM 分析結果が SSE で返るようになった。
+Phase 6 では完成した Web アプリとして使える状態に仕上げた。
+
+### 実装内容
+- `index.css`: CSS 変数（--color-primary 等）・`.btn` 共通スタイルを追加
+- `components/layout/Header.tsx`: タイトル・ユーザーメール・サインアウトボタン
+- `App.tsx`: Header + main レイアウトに整理
+- `components/result/`: SummaryCard・StrengthsList・ImprovementsList・AgentCostDisplay を新規作成
+  - AgentCostDisplay: `<details>` で折りたたみ表示
+- `AnalysisRunner.tsx`: result コンポーネント使用、エラー時に再試行ボタン追加、ボタン二重表示を修正
+- `AnalysisRunner.css` / `AudioUploader.css`: max-width を `var(--content-width)` に統一、モバイル対応追加
+
+### PR
+`feature/phase6-ui-polish` ブランチで PR 作成
+
+---
+
+## Phase 7: 未着手
+（Phase 6完了後に順次追記）

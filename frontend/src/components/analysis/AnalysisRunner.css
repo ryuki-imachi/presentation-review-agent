@@ -1,6 +1,12 @@
 .analysis-runner {
-  max-width: 480px;
+  max-width: var(--content-width);
   margin: 2rem auto;
+}
+
+@media (max-width: 600px) {
+  .analysis-runner {
+    padding: 0 0.5rem;
+  }
 }
 
 .analysis-runner h2 {
