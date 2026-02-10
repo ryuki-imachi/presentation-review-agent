@@ -66,7 +66,8 @@ def calculate_total_cost(usages: list[AgentTokenUsage]) -> AgentExecutionCostSum
     total = 0.0
     for u in usages:
         cost = u.cost_usd
-        breakdown[f"{u.agent_name}_usd"] = round(cost, 6)
+        key = f"{u.agent_name}_usd"
+        breakdown[key] = round(breakdown.get(key, 0.0) + cost, 6)
         total += cost
 
     return AgentExecutionCostSummary(
