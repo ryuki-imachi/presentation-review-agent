@@ -1,4 +1,4 @@
-"""Phase 4: AWS Transcribe 文字起こし統合."""
+"""Phase 5: Strands Agent によるプレゼンテーション LLM 分析"""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ from bedrock_agentcore import BedrockAgentCoreApp
 from dotenv import load_dotenv
 
 from events.sse import (
-    AgentExecutionCostSummary,
     AnalysisEventName,
     AnalysisStatus,
     AnalysisStep,
@@ -19,6 +18,7 @@ from events.sse import (
     new_analysis_event,
     new_analysis_result_event,
 )
+from agents import run_orchestrator
 from tools.transcribe import transcribe_audio
 
 load_dotenv()
@@ -32,7 +32,7 @@ app = BedrockAgentCoreApp()
 
 @app.entrypoint
 async def invoke(payload: dict):
-    """音声ファイルを Transcribe で文字起こしし、結果を SSE で返す."""
+    """音声ファイルを Transcribe で文字起こしし、Strands Agent で分析"""
     s3_key: str = payload.get("s3_key", "")
     owner_sub: str = payload.get("owner_sub", "")
     run_id = str(uuid4())
@@ -117,58 +117,69 @@ async def invoke(payload: dict):
             message="文字起こし済みデータを使用",
         )
 
-    # --- Step 3: running / speech（Phase 5 で実装予定、スキップ） ---
+    # --- Step 3: running / speech ---
     yield new_analysis_event(
         event=AnalysisEventName.STATUS,
         run_id=run_id,
         owner_sub=owner_sub,
         status=AnalysisStatus.RUNNING,
         step=AnalysisStep.SPEECH,
-        message="話し方分析をスキップ（Phase 5 で実装予定）",
+        message="話し方を分析中…",
     )
 
-    # --- Step 4: partial / content ---
-    preview = result.transcript[:200] + ("…" if len(result.transcript) > 200 else "")
+    # --- Orchestrator Agent 実行（speech + content 統合） ---
+    try:
+        orch_result = await run_orchestrator(result.transcript)
+    except Exception as e:
+        logger.exception("エージェント分析エラー")
+        yield new_analysis_event(
+            event=AnalysisEventName.STATUS,
+            run_id=run_id,
+            owner_sub=owner_sub,
+            status=AnalysisStatus.FAILED,
+            step=AnalysisStep.SPEECH,
+            error=EventError(code="AGENT_ERROR", detail=str(e)),
+        )
+        return
+
+    # --- Step 4: running / content ---
+    yield new_analysis_event(
+        event=AnalysisEventName.STATUS,
+        run_id=run_id,
+        owner_sub=owner_sub,
+        status=AnalysisStatus.RUNNING,
+        step=AnalysisStep.CONTENT,
+        message="内容分析が完了しました",
+    )
+
+    # --- partial / content ---
+    preview = orch_result.summary[:200] + ("…" if len(orch_result.summary) > 200 else "")
     yield new_analysis_event(
         event=AnalysisEventName.PARTIAL,
         run_id=run_id,
         owner_sub=owner_sub,
         status=AnalysisStatus.PARTIAL,
         step=AnalysisStep.CONTENT,
-        message="文字起こし完了",
+        message="分析完了",
         data={"partial_summary": preview},
     )
     await asyncio.sleep(0.5)
 
     # --- Step 5: completed / finalize ---
-    # Transcribe コスト概算: $0.024/分
-    transcribe_cost_usd = (result.duration_seconds / 60) * 0.024
-
     file_name = s3_key.rsplit("/", 1)[-1]
 
     yield new_analysis_result_event(
         run_id=run_id,
         owner_sub=owner_sub,
-        message="文字起こしが完了しました（LLM分析は Phase 5 で実装予定）",
-        summary="文字起こしが完了しました。LLM によるプレゼンテーション分析は次のフェーズで実装予定です。",
+        message="プレゼンテーション分析が完了しました",
+        summary=orch_result.summary,
         file_name=file_name,
         file_path=s3_key,
         transcript=result.transcript,
         transcript_s3_key=result.transcript_s3_key,
-        strengths=[
-            "（Phase 5 で LLM が分析します）",
-        ],
-        improvements=[
-            "（Phase 5 で LLM が分析します）",
-        ],
-        agent_cost=AgentExecutionCostSummary(
-            total_usd=0.0,
-            breakdown={
-                "transcribe_usd": round(transcribe_cost_usd, 6),
-            },
-            is_estimated=True,
-            pricing_version="phase4-v1",
-        ),
+        strengths=orch_result.strengths,
+        improvements=orch_result.improvements,
+        agent_cost=orch_result.cost_summary,
     )
 
 

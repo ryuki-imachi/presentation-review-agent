@@ -1,4 +1,4 @@
-"""AWS Transcribe 文字起こし + S3 キャッシュ."""
+"""AWS Transcribe 文字起こし + S3 キャッシュ"""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class TranscribeResult:
-    """文字起こし結果."""
+    """文字起こし結果"""
 
     transcript: str
     transcript_s3_key: str
@@ -34,18 +34,18 @@ def _derive_transcript_key(s3_key: str) -> str:
 
 
 def _job_name(s3_key: str) -> str:
-    """S3 キーから一意なジョブ名を生成."""
+    """S3 キーから一意なジョブ名を生成"""
     h = hashlib.sha256(s3_key.encode()).hexdigest()[:20]
     return f"pra-{h}"
 
 
 def _detect_language(s3_key: str) -> str:
-    """ファイル名から言語コードを推定（デフォルト: ja-JP）."""
+    """ファイル名から言語コードを推定（デフォルト: ja-JP）"""
     return "ja-JP"
 
 
 async def transcribe_audio(s3_key: str, bucket: str) -> TranscribeResult:
-    """S3 上の音声を Transcribe で文字起こしし、結果を S3 にキャッシュ."""
+    """S3 上の音声を Transcribe で文字起こしし、結果を S3 にキャッシュ"""
     transcript_s3_key = _derive_transcript_key(s3_key)
 
     s3 = boto3.client("s3")
