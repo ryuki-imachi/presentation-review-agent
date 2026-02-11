@@ -57,6 +57,7 @@ export function createAgentRuntime({
       authorizerConfiguration: authConfig,
       environmentVariables: {
         S3_BUCKET_NAME: bucket.bucketName,
+        AWS_DEFAULT_REGION: stack.region,
       },
     },
   );
