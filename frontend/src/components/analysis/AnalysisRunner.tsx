@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useSSEChat } from "../../hooks/useSSEChat";
+import { useFileDelete } from "../../hooks/useFileDelete";
 import type { AnalysisEvent, AnalysisResultData, AnalysisStep } from "../../types";
 import { SummaryCard, StrengthsList, ImprovementsList, AgentCostDisplay } from "../result";
 import "./AnalysisRunner.css";
@@ -97,12 +98,17 @@ function getErrorDetail(events: AnalysisEvent[]): string | null {
 
 interface Props {
   s3Key: string | null;
+  onDataDeleted?: () => void;
 }
 
-export function AnalysisRunner({ s3Key }: Props) {
+export function AnalysisRunner({ s3Key, onDataDeleted }: Props) {
   const { events, status, error, runId, startAnalysis, reset } = useSSEChat();
+  const { status: deleteStatus, error: deleteError, deleteFiles, reset: resetDelete } = useFileDelete();
 
-  useEffect(() => reset(), [s3Key, reset]);
+  useEffect(() => {
+    reset();
+    resetDelete();
+  }, [s3Key, reset, resetDelete]);
 
   if (!s3Key) return null;
 
@@ -206,7 +212,28 @@ export function AnalysisRunner({ s3Key }: Props) {
             <button className="btn btn--secondary" onClick={reset}>
               リセット
             </button>
+            <button
+              className="btn btn--danger"
+              disabled={deleteStatus === "deleting"}
+              onClick={async () => {
+                if (!window.confirm("アップロードした音声ファイルと文字起こしデータを削除しますか？この操作は取り消せません。")) return;
+                const paths = [
+                  resultData.file_path,
+                  resultData.transcript_s3_key,
+                ].filter((p): p is string => !!p);
+                const ok = await deleteFiles(paths);
+                if (ok) {
+                  reset();
+                  onDataDeleted?.();
+                }
+              }}
+            >
+              {deleteStatus === "deleting" ? "削除中…" : "データを削除"}
+            </button>
           </div>
+          {deleteError && (
+            <p className="analysis-message analysis-message--error">{deleteError}</p>
+          )}
         </div>
       )}
     </section>
