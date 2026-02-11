@@ -9,7 +9,7 @@
 ![Architecture](doc/architecture.png)
 
 1. ユーザーがブラウザから音声ファイルを S3 にアップロード
-2. Cognito JWT 認証付きで AgentCore Runtime にリクエスト送信
+2. Cognito JWT 認証付きで AgentCore Runtime エンドポイントに直接リクエスト
 3. AWS Transcribe で文字起こし → Orchestrator がサブエージェントで分析
 4. 進捗と結果を SSE でリアルタイムにブラウザへストリーミング返却
 
@@ -21,56 +21,48 @@
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) (Python パッケージマネージャ)
 - AWS CLI v2（認証済み）
-- Docker（バックエンドのデプロイ時）
+- Docker（AgentCore コンテナビルド時）
 
 ## セットアップ
 
-### フロントエンド
+### Dev Container（推奨）
+
+VS Code で Dev Container を使うと、必要なツールがすべてセットアップ済みの環境で開発できます。
+
+1. VS Code で本リポジトリを開く
+2. コマンドパレット → `Dev Containers: Reopen in Container`
+3. コンテナ起動後、Python・Node.js・Docker が利用可能
+
+### 手動セットアップ
+
+```bash
+# Python 依存関係
+uv sync
+
+# フロントエンド依存関係
+cd frontend
+npm install
+```
+
+## 開発
+
+Amplify Gen2 CDK により、認証（Cognito）・ストレージ（S3）・AgentCore Runtime を一括でデプロイします。
 
 ```bash
 cd frontend
-npm install
 
-# Amplify sandbox を起動（Cognito + S3 がローカル環境にプロビジョニングされる）
+# Amplify sandbox を起動（Cognito + S3 + AgentCore Runtime がプロビジョニングされる）
 npx ampx sandbox
 
 # 別ターミナルで開発サーバーを起動
 npm run dev
 ```
 
-### バックエンド
-
-```bash
-# 依存関係のインストール
-uv sync
-
-# ローカル環境変数を設定（S3バケット名等）
-cp backend/.env.example backend/.env
-# backend/.env を編集
-
-# ローカル起動
-cd backend
-agentcore dev
-```
+sandbox が起動すると `amplify_outputs.json` が生成され、フロントエンドが自動的に AgentCore Runtime のエンドポイントに接続します。
 
 ## デプロイ
 
-### フロントエンド
-
-Amplify Hosting を使用します。GitHub リポジトリを接続すると自動デプロイされます。
-
-### バックエンド
-
-AgentCore Starter Toolkit を使用します。
-
-```bash
-cd backend
-
-# Docker イメージをビルド & ECR にプッシュ & AgentCore にデプロイ
-agentcore launch
-```
-
-デプロイ後、AgentCore エンドポイントに Cognito JWT 認証を設定してください。
+Amplify Hosting を使用します。GitHub リポジトリを接続すると、フロントエンド・認証・ストレージ・AgentCore Runtime が自動デプロイされます。
 
 ## 使い方
 
@@ -86,9 +78,17 @@ agentcore launch
 ```
 presentation-review-agent/
 ├── frontend/                   # React + Vite + Amplify Gen2
-│   ├── amplify/                # Amplify バックエンドリソース定義
+│   ├── amplify/                # Amplify バックエンドリソース定義 (CDK)
 │   │   ├── auth/resource.ts    #   Cognito 認証
 │   │   ├── storage/resource.ts #   S3 ストレージ
+│   │   ├── agent/              #   AgentCore Runtime
+│   │   │   ├── resource.ts     #     CDK リソース定義
+│   │   │   └── runtime/        #     Python コード + Dockerfile
+│   │   │       ├── Dockerfile
+│   │   │       ├── main.py     #     AgentCore エントリーポイント
+│   │   │       ├── agents/     #     Strands Agents
+│   │   │       ├── tools/      #     Transcribe連携・コスト算出
+│   │   │       └── events/     #     SSE イベント生成
 │   │   └── backend.ts          #   統合定義
 │   ├── src/
 │   │   ├── components/
@@ -102,27 +102,17 @@ presentation-review-agent/
 │   │   │   └── useFileDelete.ts    # S3 ファイル削除
 │   │   └── types/              # SSE イベント型定義
 │   └── package.json
-├── backend/                    # Python (AgentCore)
-│   ├── agents/
-│   │   ├── orchestrator.py     #   統括エージェント (Sonnet 4.5)
-│   │   ├── speech_analyzer.py  #   話し方分析 (Haiku 4.5)
-│   │   └── content_analyzer.py #   内容分析 (Haiku 4.5)
-│   ├── tools/
-│   │   ├── transcribe.py       #   AWS Transcribe 連携
-│   │   └── cost_tracker.py     #   エージェント実行コスト算出
-│   ├── events/
-│   │   └── sse.py              #   SSE イベント生成
-│   ├── logging_config.py       #   構造化ログ設定
-│   ├── main.py                 #   AgentCore エントリーポイント
-│   └── Dockerfile
+├── backend/                    # Python (レガシー: 手動デプロイ用)
 ├── doc/                        # ドキュメント
 │   ├── architecture.drawio     #   アーキテクチャ図 (draw.io)
 │   ├── architecture.png        #   アーキテクチャ図 (PNG)
+│   ├── cdk-migration.md        #   CDK 移行ガイド
 │   ├── basic_design.md         #   設計書
 │   ├── progress.md             #   開発進捗
 │   ├── pricing-update-guide.md #   料金テーブル更新手順
 │   ├── monitoring-guide.md     #   CloudWatch モニタリングガイド
 │   └── s3-lifecycle-guide.md   #   S3 ライフサイクル設定ガイド
+├── .devcontainer/              # Dev Container 設定
 ├── pyproject.toml
 └── README.md
 ```
