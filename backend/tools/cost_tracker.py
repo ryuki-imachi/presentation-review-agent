@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from events.sse import AgentExecutionCostSummary
 
 # Bedrock Cross-Region Inference 料金テーブル
+# 料金確認: https://aws.amazon.com/bedrock/pricing/
+# 更新手順: doc/pricing-update-guide.md を参照
 PRICING: dict[str, dict[str, float]] = {
     "us.anthropic.claude-sonnet-4-5-20250929-v1:0": {
         "input_per_1m": 3.0,
