@@ -6,25 +6,14 @@
 
 ## アーキテクチャ
 
-```
-[ブラウザ (React + Vite + Amplify Gen2)]
-       |
-       |-- Cognito 認証 (JWT)
-       |-- S3 アップロード (Amplify Storage)
-       |-- AgentCore Runtime 呼び出し (SSE)
-       |
-       v
-[Bedrock AgentCore Runtime (Docker/ECS)]
-       |
-       |-- Orchestrator Agent (Claude Sonnet 4.5)
-       |     |-- Speech Analyzer Agent (Claude Haiku 4.5)
-       |     |-- Content Analyzer Agent (Claude Haiku 4.5)
-       |
-       |-- AWS Transcribe (音声文字起こし)
-       |-- S3 (音声ファイル & 文字起こし結果キャッシュ)
-       v
-[フィードバックレポート → SSE でブラウザにストリーミング返却]
-```
+![Architecture](doc/architecture.png)
+
+1. ユーザーがブラウザから音声ファイルを S3 にアップロード
+2. Cognito JWT 認証付きで AgentCore Runtime にリクエスト送信
+3. AWS Transcribe で文字起こし → Orchestrator がサブエージェントで分析
+4. 進捗と結果を SSE でリアルタイムにブラウザへストリーミング返却
+
+> 図の編集: [doc/architecture.drawio](doc/architecture.drawio) を draw.io で開いてください
 
 ## 前提条件
 
@@ -127,6 +116,8 @@ presentation-review-agent/
 │   ├── main.py                 #   AgentCore エントリーポイント
 │   └── Dockerfile
 ├── doc/                        # ドキュメント
+│   ├── architecture.drawio     #   アーキテクチャ図 (draw.io)
+│   ├── architecture.png        #   アーキテクチャ図 (PNG)
 │   ├── basic_design.md         #   設計書
 │   ├── progress.md             #   開発進捗
 │   ├── pricing-update-guide.md #   料金テーブル更新手順
