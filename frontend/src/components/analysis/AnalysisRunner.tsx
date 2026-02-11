@@ -98,9 +98,10 @@ function getErrorDetail(events: AnalysisEvent[]): string | null {
 
 interface Props {
   s3Key: string | null;
+  onDataDeleted?: () => void;
 }
 
-export function AnalysisRunner({ s3Key }: Props) {
+export function AnalysisRunner({ s3Key, onDataDeleted }: Props) {
   const { events, status, error, runId, startAnalysis, reset } = useSSEChat();
   const { status: deleteStatus, error: deleteError, deleteFiles, reset: resetDelete } = useFileDelete();
 
@@ -221,7 +222,10 @@ export function AnalysisRunner({ s3Key }: Props) {
                   resultData.transcript_s3_key,
                 ].filter((p): p is string => !!p);
                 const ok = await deleteFiles(paths);
-                if (ok) reset();
+                if (ok) {
+                  reset();
+                  onDataDeleted?.();
+                }
               }}
             >
               {deleteStatus === "deleting" ? "削除中…" : "データを削除"}

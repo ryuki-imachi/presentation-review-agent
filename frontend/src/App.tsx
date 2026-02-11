@@ -13,7 +13,7 @@ function App() {
       <Header userEmail={user?.signInDetails?.loginId} signOut={signOut} />
       <main className="app__main">
         <AudioUploader {...audioUpload} />
-        <AnalysisRunner s3Key={audioUpload.uploadedPath} />
+        <AnalysisRunner s3Key={audioUpload.uploadedPath} onDataDeleted={audioUpload.reset} />
       </main>
     </div>
   );
