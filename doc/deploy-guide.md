@@ -32,18 +32,15 @@ aws sts get-caller-identity
 
 ## 2. AWS 側の事前準備
 
-### Bedrock モデルアクセスの有効化
+### Bedrock モデルアクセスについて
 
-AgentCore 上のエージェントが Bedrock の Claude モデルを使用するため、事前にモデルアクセスを有効化する必要があります。
+2025年9月以降、Bedrock のサーバーレスモデルは全 AWS アカウントで自動的に有効化されるようになりました。**手動でのモデルアクセス有効化は不要です。**
 
-1. [AWS コンソール](https://console.aws.amazon.com/bedrock/) → Amazon Bedrock → **モデルアクセス**
-2. リージョンが `us-east-1` であることを確認
-3. 以下のモデルのアクセスをリクエスト:
-   - **Claude Sonnet 4.5**（Orchestrator エージェントが使用）
-   - **Claude Haiku 4.5**（Speech/Content Analyzer サブエージェントが使用）
-4. ステータスが「アクセスが付与されました」になるまで待つ（通常は即時）
+本アプリが使用するモデル:
+- **Claude Sonnet 4.5**（Orchestrator エージェント）
+- **Claude Haiku 4.5**（Speech/Content Analyzer サブエージェント）
 
-> **Note**: IAM ポリシーの事前作成は不要です。AgentCore が必要な IAM ロールを自動作成します。
+> **Note**: IAM ポリシーや SCP でモデルアクセスを制限している場合は、`bedrock:InvokeModel` の許可が必要です。IAM ロールの事前作成は不要です（AgentCore が自動作成します）。
 
 ## 3. フロントエンドのデプロイ（Amplify Gen2）
 
