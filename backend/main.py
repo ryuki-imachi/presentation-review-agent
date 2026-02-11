@@ -5,10 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from uuid import uuid4
 
 from bedrock_agentcore import BedrockAgentCoreApp
 from dotenv import load_dotenv
+
+from logging_config import setup_logging
 
 from events.sse import (
     AnalysisEventName,
@@ -22,6 +25,7 @@ from agents import run_orchestrator
 from tools.transcribe import transcribe_audio
 
 load_dotenv()
+setup_logging()
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +40,9 @@ async def invoke(payload: dict):
     s3_key: str = payload.get("s3_key", "")
     owner_sub: str = payload.get("owner_sub", "")
     run_id = str(uuid4())
+    start_time = time.monotonic()
+
+    logger.info("分析リクエスト受付", extra={"run_id": run_id, "owner_sub": owner_sub, "s3_key": s3_key})
 
     # --- バリデーション ---
     if not s3_key or not owner_sub:
@@ -95,7 +102,7 @@ async def invoke(payload: dict):
     try:
         result = await transcribe_audio(s3_key=s3_key, bucket=S3_BUCKET_NAME)
     except Exception as e:
-        logger.exception("Transcribe エラー")
+        logger.exception("Transcribe エラー", extra={"run_id": run_id, "owner_sub": owner_sub})
         yield new_analysis_event(
             event=AnalysisEventName.STATUS,
             run_id=run_id,
@@ -131,7 +138,7 @@ async def invoke(payload: dict):
     try:
         orch_result = await run_orchestrator(result.transcript)
     except Exception as e:
-        logger.exception("エージェント分析エラー")
+        logger.exception("エージェント分析エラー", extra={"run_id": run_id, "owner_sub": owner_sub})
         yield new_analysis_event(
             event=AnalysisEventName.STATUS,
             run_id=run_id,
@@ -166,7 +173,19 @@ async def invoke(payload: dict):
     await asyncio.sleep(0.5)
 
     # --- Step 5: completed / finalize ---
+    elapsed = time.monotonic() - start_time
     file_name = s3_key.rsplit("/", 1)[-1]
+
+    logger.info(
+        "分析完了",
+        extra={
+            "run_id": run_id,
+            "owner_sub": owner_sub,
+            "elapsed_seconds": round(elapsed, 2),
+            "total_cost_usd": orch_result.cost_summary.total_usd,
+            "cached_transcript": result.cached,
+        },
+    )
 
     yield new_analysis_result_event(
         run_id=run_id,
