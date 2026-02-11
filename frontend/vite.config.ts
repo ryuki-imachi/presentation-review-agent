@@ -11,7 +11,7 @@ export default defineConfig({
       '/api/analyze': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => '/invocations',
+        rewrite: () => '/invocations',
       },
     },
   },
