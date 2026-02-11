@@ -3,9 +3,15 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "hostRequirements": {
+    "memory": "4gb"
+  },
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false
     }
   },
   "customizations": {
@@ -31,5 +37,5 @@
   "mounts": [
     "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind"
   ],
-  "postCreateCommand": "uv sync"
+  "postCreateCommand": "uv sync && cd frontend && npm install"
 }
