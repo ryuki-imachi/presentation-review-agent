@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
+import outputs from "../../amplify_outputs.json";
 import type { AnalysisEvent } from "../types";
 import { isAnalysisEvent } from "../types/sse";
 
@@ -24,9 +25,20 @@ const initialState: SSEChatState = {
   error: null,
 };
 
+/** amplify_outputs.json から AgentCore Runtime の呼び出し URL を構築 */
+function getAgentCoreUrl(): string {
+  const runtimeArn = (outputs as Record<string, unknown> & { custom?: { agentRuntimeArn?: string } }).custom?.agentRuntimeArn;
+  if (!runtimeArn) {
+    throw new Error("agentRuntimeArn が amplify_outputs.json に設定されていません。");
+  }
+  const region = runtimeArn.split(":")[3];
+  const encodedArn = encodeURIComponent(runtimeArn);
+  return `https://bedrock-agentcore.${region}.amazonaws.com/runtimes/${encodedArn}/invocations?qualifier=DEFAULT`;
+}
+
 /**
  * SSE通信でバックエンドの分析イベントを受信するカスタムフック。
- * fetch + ReadableStream で POST リクエストに対応。
+ * fetch + ReadableStream で AgentCore Runtime に直接リクエスト。
  */
 export function useSSEChat(): SSEChatState & SSEChatActions {
   const [state, setState] = useState<SSEChatState>(initialState);
@@ -41,10 +53,10 @@ export function useSSEChat(): SSEChatState & SSEChatActions {
     setState({ events: [], status: "connecting", runId: null, error: null });
 
     try {
-      // Cognito ID Token と owner_sub を取得
+      // Cognito アクセストークンと owner_sub を取得
       const session = await fetchAuthSession();
-      const idToken = session.tokens?.idToken;
-      if (!idToken) {
+      const accessToken = session.tokens?.accessToken;
+      if (!accessToken) {
         throw new Error("認証トークンが取得できませんでした。再ログインしてください。");
       }
       // S3パスは identityId を使っているので、sub ではなく identityId を送る
@@ -53,11 +65,13 @@ export function useSSEChat(): SSEChatState & SSEChatActions {
         throw new Error("identityId が取得できませんでした。再ログインしてください。");
       }
 
-      const response = await fetch("/api/analyze", {
+      const url = getAgentCoreUrl();
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken.toString()}`,
+          Accept: "text/event-stream",
+          Authorization: `Bearer ${accessToken.toString()}`,
         },
         body: JSON.stringify({ s3_key: s3Key, owner_sub: ownerSub }),
         signal: controller.signal,
