@@ -107,9 +107,7 @@ export function createAgentRuntime({
     {
       name: `${runtimeName}-logs-dest`,
       deliveryDestinationType: "CWL",
-      deliveryDestinationConfiguration: {
-        destinationResourceArn: logGroup.logGroupArn,
-      },
+      destinationResourceArn: logGroup.logGroupArn,
     },
   );
 
