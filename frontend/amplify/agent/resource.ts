@@ -2,6 +2,7 @@ import * as path from "path";
 import * as url from "url";
 import * as cdk from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as agentcore from "@aws-cdk/aws-bedrock-agentcore-alpha";
 import type { IUserPool, IUserPoolClient } from "aws-cdk-lib/aws-cognito";
 import type * as s3 from "aws-cdk-lib/aws-s3";
@@ -60,6 +61,85 @@ export function createAgentRuntime({
         AWS_DEFAULT_REGION: stack.region,
       },
     },
+  );
+
+  // ─── Observability: トレース・ログ配信設定 ───
+
+  // ロググループ（vended logs）
+  const logGroup = new logs.LogGroup(stack, "AgentCoreLogGroup", {
+    logGroupName: `/aws/vendedlogs/bedrock-agentcore/${runtimeName}`,
+    retention: logs.RetentionDays.ONE_MONTH,
+    removalPolicy: cdk.RemovalPolicy.DESTROY,
+  });
+
+  // トレース配信ソース
+  const traceSource = new logs.CfnDeliverySource(
+    stack,
+    "TracesDeliverySource",
+    {
+      name: `${runtimeName}-traces`,
+      logType: "TRACES",
+      resourceArn: runtime.agentRuntimeArn,
+    },
+  );
+
+  // ログ配信ソース
+  const logSource = new logs.CfnDeliverySource(stack, "LogsDeliverySource", {
+    name: `${runtimeName}-logs`,
+    logType: "APPLICATION_LOGS",
+    resourceArn: runtime.agentRuntimeArn,
+  });
+
+  // トレース配信先（X-Ray）
+  const traceDestination = new logs.CfnDeliveryDestination(
+    stack,
+    "TracesDeliveryDestination",
+    {
+      name: `${runtimeName}-traces-dest`,
+      deliveryDestinationType: "XRAY",
+    },
+  );
+
+  // ログ配信先（CloudWatch Logs）
+  const logDestination = new logs.CfnDeliveryDestination(
+    stack,
+    "LogsDeliveryDestination",
+    {
+      name: `${runtimeName}-logs-dest`,
+      deliveryDestinationType: "CWL",
+      deliveryDestinationConfiguration: {
+        destinationResourceArn: logGroup.logGroupArn,
+      },
+    },
+  );
+
+  // 配信接続: トレース → X-Ray
+  const traceDelivery = new logs.CfnDelivery(stack, "TracesDelivery", {
+    deliverySourceName: traceSource.name!,
+    deliveryDestinationArn: traceDestination.attrArn,
+  });
+  traceDelivery.addDependency(traceSource);
+  traceDelivery.addDependency(traceDestination);
+
+  // 配信接続: ログ → CloudWatch Logs
+  const logDelivery = new logs.CfnDelivery(stack, "LogsDelivery", {
+    deliverySourceName: logSource.name!,
+    deliveryDestinationArn: logDestination.attrArn,
+  });
+  logDelivery.addDependency(logSource);
+  logDelivery.addDependency(logDestination);
+
+  // X-Ray トレース送信権限
+  runtime.addToRolePolicy(
+    new iam.PolicyStatement({
+      actions: [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords",
+        "xray:GetSamplingRules",
+        "xray:GetSamplingTargets",
+      ],
+      resources: ["*"],
+    }),
   );
 
   // Bedrock InvokeModel 権限
