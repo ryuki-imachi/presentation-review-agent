@@ -2,4 +2,5 @@ bedrock-agentcore
 boto3
 botocore[crt]
 python-dotenv
-strands-agents
+strands-agents[otel]
+aws-opentelemetry-distro
