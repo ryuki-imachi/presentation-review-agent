@@ -2,17 +2,20 @@
 
 Presentation Review Agent をゼロから AWS にデプロイするための手順書です。
 
+Amplify Gen2 + CDK により、フロントエンド・認証・ストレージ・バックエンド（AgentCore）を一括でデプロイします。
+
 ## 1. 前提条件
 
 ### 必要なツール
 
 | ツール | バージョン | 用途 |
 |---|---|---|
-| Node.js | 18+ | フロントエンドビルド |
-| Python | 3.12+ | バックエンド実行 |
-| [uv](https://docs.astral.sh/uv/) | 最新 | Python パッケージ管理 |
+| Node.js | 18+ | フロントエンドビルド・CDK デプロイ |
+| npm | 10+ | パッケージ管理 |
+| Docker | 最新 | AgentCore コンテナイメージのビルド |
 | AWS CLI | v2 | AWS 操作全般 |
-| Docker | 最新 | バックエンドコンテナビルド |
+
+> **Note**: Python や uv はローカル開発環境では不要です。Python コードは Docker コンテナ内で実行されます。
 
 ### AWS アカウントの準備
 
@@ -30,8 +33,6 @@ aws login
 aws sts get-caller-identity
 ```
 
-## 2. AWS 側の事前準備
-
 ### Bedrock モデルアクセスについて
 
 2025年9月以降、Bedrock のサーバーレスモデルは全 AWS アカウントで自動的に有効化されるようになりました。**手動でのモデルアクセス有効化は不要です。**
@@ -40,13 +41,82 @@ aws sts get-caller-identity
 - **Claude Sonnet 4.5**（Orchestrator エージェント）
 - **Claude Haiku 4.5**（Speech/Content Analyzer サブエージェント）
 
-> **Note**: IAM ポリシーや SCP でモデルアクセスを制限している場合は、`bedrock:InvokeModel` の許可が必要です。IAM ロールの事前作成は不要です（AgentCore が自動作成します）。
+> **Note**: IAM ポリシーや SCP でモデルアクセスを制限している場合は、`bedrock:InvokeModel` の許可が必要です。IAM ロールは CDK が自動作成します。
 
-## 3. フロントエンドのデプロイ（Amplify Gen2）
+## 2. デプロイアーキテクチャ
 
-フロントエンドは AWS Amplify Hosting を使い、GitHub リポジトリと接続して自動デプロイします。
+CDK 移行後、すべてのインフラは `frontend/amplify/` 配下の CDK コードで管理されます。
 
-### 3.1 Amplify Hosting で GitHub リポジトリを接続
+```
+frontend/amplify/
+├── backend.ts              ← Amplify バックエンド統合（auth + storage + agent）
+├── auth/resource.ts        ← Cognito User Pool（メールログイン）
+├── storage/resource.ts     ← S3 バケット（音声ファイル保存）
+└── agent/
+    ├── resource.ts         ← AgentCore Runtime CDK 定義
+    └── runtime/            ← Python コード + Dockerfile（コンテナイメージ）
+```
+
+`npx ampx sandbox`（開発）または Amplify Hosting（本番）で以下が一括デプロイされます:
+
+- **Cognito User Pool** — メールベースの認証
+- **S3 バケット** — `private/{entity_id}/*` のアクセス制御付き
+- **AgentCore Runtime** — Cognito JWT 認証付き、IAM ポリシー自動設定
+
+## 3. ローカル開発環境のセットアップ
+
+### 3.1 依存関係のインストール
+
+```bash
+cd frontend
+npm install
+```
+
+### 3.2 Amplify Sandbox の起動
+
+Sandbox は個人用の開発環境をクラウド上にプロビジョニングします:
+
+```bash
+cd frontend
+npx ampx sandbox
+```
+
+初回は以下が自動作成されます:
+- Cognito User Pool + App Client
+- S3 バケット
+- AgentCore Runtime（Docker イメージのビルド → ECR プッシュ → Runtime デプロイ）
+
+> **Note**: 初回は Docker イメージのビルドと ECR プッシュがあるため、数分かかります。
+
+デプロイ完了後、`frontend/amplify_outputs.json` が自動生成されます。このファイルにはフロントエンドが必要とする全設定（Cognito、S3、AgentCore Runtime ARN）が含まれます。
+
+### 3.3 フロントエンド開発サーバーの起動
+
+別ターミナルで:
+
+```bash
+cd frontend
+npm run dev
+```
+
+`http://localhost:5173` でアクセスできます。
+
+### 3.4 Sandbox の停止
+
+開発が終わったら Sandbox を停止します（`Ctrl+C` または以下のコマンド）:
+
+```bash
+cd frontend
+npx ampx sandbox delete
+```
+
+> **Note**: `sandbox delete` で AWS リソースが削除されます。`amplify_outputs.json` はローカルに残るため、次回 `npx ampx sandbox` で再作成されます。
+
+## 4. 本番環境のデプロイ（Amplify Hosting）
+
+本番環境は AWS Amplify Hosting を使い、GitHub リポジトリと接続して自動デプロイします。
+
+### 4.1 Amplify Hosting で GitHub リポジトリを接続
 
 1. [AWS コンソール](https://console.aws.amazon.com/amplify/) → AWS Amplify → **新しいアプリを作成**
 2. **GitHub** を選択し、リポジトリへのアクセスを承認
@@ -58,132 +128,44 @@ aws sts get-caller-identity
    - 出力ディレクトリ: `dist`
 7. 「保存してデプロイ」をクリック
 
-### 3.2 Cognito + S3 の自動プロビジョニング
+### 4.2 自動プロビジョニングされるリソース
 
-Amplify Gen2 は `frontend/amplify/` 配下のリソース定義を読み取り、以下を自動でプロビジョニングします:
+Amplify Gen2 は `frontend/amplify/` 配下の CDK コードを読み取り、以下を自動でプロビジョニングします:
 
 - **Cognito User Pool**（メールログイン）— `amplify/auth/resource.ts`
 - **S3 バケット**（`private/{entity_id}/*` アクセス制御）— `amplify/storage/resource.ts`
+- **AgentCore Runtime**（JWT 認証 + IAM ポリシー付き）— `amplify/agent/resource.ts`
 
-デプロイ完了後、Amplify コンソールの「デプロイされたバックエンドリソース」からそれぞれの情報を確認できます。
+CDK により以下も自動設定されます:
+- AgentCore ↔ Cognito の JWT 認証連携
+- AgentCore → S3 / Bedrock / Transcribe の IAM ポリシー
+- `amplify_outputs.json` の生成（フロントエンドへの設定注入）
 
-### 3.3 `amplify_outputs.json` について
+### 4.3 `amplify_outputs.json` について
 
 - Amplify のデプロイプロセスがビルド時に `amplify_outputs.json` を自動生成します
-- このファイルには Cognito・S3 の設定情報が含まれ、フロントエンドが実行時に読み込みます
+- このファイルには Cognito・S3・AgentCore Runtime ARN の設定情報が含まれます
 - **手動作成は不要** — Amplify Hosting が自動で処理します
 - ローカル開発時は `npx ampx sandbox` が生成します
 
-### 3.4 デプロイ後の確認
+### 4.4 デプロイ後の確認
 
 - Amplify コンソールでデプロイステータスが「成功」になっていることを確認
 - 提供された URL にアクセスし、Cognito ログイン画面が表示されることを確認
-- Cognito User Pool ID と S3 バケット名をメモしておく（バックエンド設定で使用）
 
-#### S3 バケット名の確認方法
+## 5. フロントエンドと AgentCore の接続
 
-以下のいずれかの方法で確認できます:
-
-- **Amplify コンソール** → アプリ → 「デプロイされたバックエンドリソース」→ Storage
-- **AWS コンソール** → S3 → `amplify-` で始まるバケット名を探す（`presentationaudiostorage` を含むもの）
-
-## 4. バックエンドのデプロイ（AgentCore）
-
-### 4.1 依存関係のインストール
-
-プロジェクトルートで:
-
-```bash
-uv sync
-```
-
-### 4.2 環境変数の設定
-
-`backend/.env` を作成し、S3 バケット名を設定します:
-
-`backend/.env` を新規作成:
-
-```env
-S3_BUCKET_NAME=<Amplifyが作成したS3バケット名>
-AWS_REGION=us-east-1
-```
-
-> `S3_BUCKET_NAME` には手順 3.4 で確認した S3 バケット名を設定してください。
-
-### 4.3 ローカルでの動作確認（任意）
-
-本番デプロイ前にローカルで動作確認したい場合:
-
-```bash
-cd backend
-agentcore dev
-```
-
-別ターミナルで疎通確認:
-
-```bash
-curl -X POST http://localhost:8080/invocations \
-  -H "Content-Type: application/json" \
-  -d '{"s3_key":"private/test-sub/audio/test.mp3","owner_sub":"test-sub"}' \
-  --no-buffer
-```
-
-### 4.4 AgentCore へのデプロイ
-
-```bash
-cd backend
-agentcore launch
-```
-
-`agentcore launch` は以下を自動で行います:
-
-1. **Dockerfile の自動生成**（プロジェクトに含まれていない場合）
-2. **Docker イメージのビルド**
-3. **ECR リポジトリの作成**（存在しない場合）
-4. **ECR へのイメージプッシュ**
-5. **IAM 実行ロールの自動作成**（`.bedrock_agentcore.yaml` で `execution_role_auto_create: true`）
-6. **AgentCore Runtime へのデプロイ**
-
-デプロイ完了後、AgentCore エンドポイント URL が表示されます。この URL をメモしておいてください。
-
-> **Note**: 初回デプロイには数分かかることがあります。Docker イメージのビルドと ECR プッシュが主な所要時間です。
-
-## 5. デプロイ後の設定
-
-### 5.1 AgentCore エンドポイントに Cognito JWT 認証を設定
-
-AgentCore エンドポイントを外部から保護するため、Cognito JWT 認証を設定します。
-
-1. **AgentCore コンソール**でデプロイしたエージェントを選択
-2. **認証設定**（Authentication）を開く
-3. 以下を設定:
-
-| 設定項目 | 値 |
-|---|---|
-| **Discovery URL** | `https://cognito-idp.us-east-1.amazonaws.com/<User Pool ID>/.well-known/openid-configuration` |
-| **Allowed Clients** | Amplify が作成した Cognito App Client ID |
-
-- **User Pool ID**: Amplify コンソール → アプリ → デプロイされたバックエンドリソース → Auth で確認
-- **App Client ID**: Cognito コンソール → User Pool → アプリケーションの統合 → アプリクライアントで確認
-
-### 5.2 フロントエンドからの接続設定
-
-フロントエンドが AgentCore エンドポイントにリクエストを送れるよう設定します。
-
-開発環境では `vite.config.ts` の proxy 設定で AgentCore エンドポイントを指定します:
+CDK 移行後、フロントエンドは `amplify_outputs.json` の `custom.agentRuntimeArn` から AgentCore エンドポイント URL を自動構築します。**手動での URL 設定やプロキシ設定は不要です。**
 
 ```typescript
-// frontend/vite.config.ts
-proxy: {
-  '/api/analyze': {
-    target: '<AgentCore エンドポイント URL>',
-    changeOrigin: true,
-    rewrite: () => '/invocations',
-  },
-},
+// useSSEChat.ts での URL 構築（自動）
+const runtimeArn = outputs.custom.agentRuntimeArn;
+const region = runtimeArn.split(":")[3];
+const encodedArn = encodeURIComponent(runtimeArn);
+const url = `https://bedrock-agentcore.${region}.amazonaws.com/runtimes/${encodedArn}/invocations?qualifier=DEFAULT`;
 ```
 
-本番環境（Amplify Hosting）では、フロントエンドの SSE 通信フック（`useSSEChat.ts`）が AgentCore エンドポイントに直接リクエストを送ります。環境変数や設定ファイルで本番用エンドポイント URL を設定してください。
+認証には Cognito の `accessToken` を Bearer トークンとして使用します。
 
 ## 6. 動作確認
 
@@ -206,9 +188,10 @@ proxy: {
 |---|---|
 | ログイン画面が表示されない | Amplify デプロイが成功しているか確認。`amplify_outputs.json` が生成されているか |
 | アップロード失敗 | S3 バケットのアクセス制御設定を確認。Cognito Identity Pool の IAM ロールを確認 |
-| 「分析開始」でエラー | AgentCore エンドポイントの JWT 認証設定を確認。Discovery URL と Allowed Clients が正しいか |
-| 文字起こしエラー | Transcribe の権限（`transcribe:StartTranscriptionJob` 等）が IAM ロールにあるか確認 |
-| LLM 分析エラー | Bedrock モデルアクセスが有効か確認。`bedrock:InvokeModel` 権限があるか確認 |
+| 「分析開始」でエラー | AgentCore Runtime がデプロイ済みか確認。`amplify_outputs.json` に `agentRuntimeArn` があるか |
+| 文字起こしエラー | AgentCore の IAM ロールに `transcribe:StartTranscriptionJob` 権限があるか確認（CDK で自動付与済み） |
+| LLM 分析エラー | Bedrock モデルアクセスが有効か確認。AgentCore の IAM ロールに `bedrock:InvokeModel` 権限があるか確認（CDK で自動付与済み） |
+| Sandbox デプロイが遅い | Docker イメージのビルドが主な所要時間。初回は特に時間がかかる |
 
 ## 7. 運用関連
 
@@ -217,3 +200,7 @@ proxy: {
 - **[CloudWatch モニタリングガイド](monitoring-guide.md)** — ログ検索クエリ、ダッシュボード作成手順
 - **[S3 ライフサイクル設定ガイド](s3-lifecycle-guide.md)** — 古いファイルの自動削除設定
 - **[料金テーブル更新ガイド](pricing-update-guide.md)** — Bedrock モデル料金の更新手順
+
+## 参考: 旧手動デプロイ（非推奨）
+
+CDK 移行前の手動デプロイ手順は `backend/` ディレクトリに残されています。`agentcore launch` による手動デプロイはフォールバック用として利用可能ですが、通常は CDK 管理の手順を推奨します。詳細は [CDK 移行ガイド](cdk-migration.md) を参照してください。
