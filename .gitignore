@@ -29,3 +29,6 @@ __pycache__/
 
 # Test audio data
 test-audio-data/
+
+# Assets
+assets/
