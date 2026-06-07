@@ -1,25 +1,39 @@
 # Presentation Review Agent
 
-プレゼンテーション音声をアップロードすると、AI がフィードバックを返すWebアプリケーションです。
+プレゼンテーション音声をアップロードすると、AI が話し方・内容を多角的に分析してフィードバックを返すWebアプリケーションです。
 
 音声 → 文字起こし（AWS Transcribe）→ AI 分析（Strands Agents on Bedrock）→ フィードバックレポート
 
 ## アーキテクチャ
 
-![Architecture](doc/architecture.png)
+![Architecture](doc/architecture-20260404.png)
 
 1. ユーザーがブラウザから音声ファイルを S3 にアップロード
-2. Cognito JWT 認証付きで AgentCore Runtime エンドポイントに直接リクエスト
+2. Cognito JWT 認証付きで AgentCore Runtime エンドポイントにリクエスト
 3. AWS Transcribe で文字起こし → Orchestrator がサブエージェントで分析
 4. 進捗と結果を SSE でリアルタイムにブラウザへストリーミング返却
 
-> 図の編集: [doc/architecture.drawio](doc/architecture.drawio) を draw.io で開いてください
+> 図の編集: [doc/architecture-20260404.drawio](doc/architecture-20260404.drawio) を draw.io で開いてください
+
+## 技術スタック
+
+| 項目 | 技術 |
+|------|------|
+| フロントエンド | React + Vite + TypeScript |
+| 認証 | Amazon Cognito（Amplify Auth） |
+| ストレージ | Amazon S3（Amplify Storage） |
+| ホスティング | AWS Amplify Hosting（CloudFront） |
+| バックエンド | Amazon Bedrock AgentCore Runtime |
+| エージェント | Strands Agents（Agents-as-Tools パターン） |
+| LLM | Claude Sonnet（Amazon Bedrock） |
+| 音声書き起こし | Amazon Transcribe |
+| IaC | AWS CDK（Amplify Gen2） |
 
 ## 前提条件
 
 - Node.js 18+
 - Python 3.12+
-- [uv](https://docs.astral.sh/uv/) (Python パッケージマネージャ)
+- [uv](https://docs.astral.sh/uv/)（Python パッケージマネージャ）
 - AWS CLI v2（認証済み）
 - Docker（AgentCore コンテナビルド時）
 
@@ -64,6 +78,8 @@ sandbox が起動すると `amplify_outputs.json` が生成され、フロント
 
 Amplify Hosting を使用します。GitHub リポジトリを接続すると、フロントエンド・認証・ストレージ・AgentCore Runtime が自動デプロイされます。
 
+詳細は [doc/deploy-guide.md](doc/deploy-guide.md) を参照してください。
+
 ## 使い方
 
 1. ブラウザでアプリにアクセスし、Cognito でログイン
@@ -102,16 +118,16 @@ presentation-review-agent/
 │   │   │   └── useFileDelete.ts    # S3 ファイル削除
 │   │   └── types/              # SSE イベント型定義
 │   └── package.json
-├── backend/                    # Python (レガシー: 手動デプロイ用)
 ├── doc/                        # ドキュメント
-│   ├── architecture.drawio     #   アーキテクチャ図 (draw.io)
-│   ├── architecture.png        #   アーキテクチャ図 (PNG)
-│   ├── cdk-migration.md        #   CDK 移行ガイド
+│   ├── architecture-20260404.drawio  # アーキテクチャ図 (draw.io)
+│   ├── architecture-20260404.png     # アーキテクチャ図 (PNG)
 │   ├── basic_design.md         #   設計書
-│   ├── progress.md             #   開発進捗
-│   ├── pricing-update-guide.md #   料金テーブル更新手順
+│   ├── deploy-guide.md         #   デプロイガイド
+│   ├── observability-setup.md  #   Observability 設定ガイド
 │   ├── monitoring-guide.md     #   CloudWatch モニタリングガイド
-│   └── s3-lifecycle-guide.md   #   S3 ライフサイクル設定ガイド
+│   ├── pricing-update-guide.md #   料金テーブル更新手順
+│   ├── s3-lifecycle-guide.md   #   S3 ライフサイクル設定ガイド
+│   └── progress.md             #   開発進捗
 ├── .devcontainer/              # Dev Container 設定
 ├── pyproject.toml
 └── README.md
