@@ -22,17 +22,17 @@
 - 料金表示対象はエージェント実行分のみ（Transcribe/S3等は対象外）
 
 ### このリポジトリで作成済みの実装雛形
-- `/Users/ryuki/Desktop/work/presentation-review-agent/frontend/src/types/sse.ts`
+- `frontend/src/types/sse.ts`
   - SSEイベント型（`analysis.status/partial/result`）
   - `analysis.result.data.agent_cost` の型定義と型ガード
-- `/Users/ryuki/Desktop/work/presentation-review-agent/frontend/src/types/index.ts`
+- `frontend/src/types/index.ts`
   - 型の再エクスポート
-- `/Users/ryuki/Desktop/work/presentation-review-agent/backend/events/sse.py`
+- `backend/events/sse.py`
   - SSEイベント生成関数
   - `AgentExecutionCostSummary`
   - `new_analysis_result_event`（`agent_cost` 付き）
   - 所有者照合ヘルパー（`request_sub` と `owner_sub` の一致確認）
-- `/Users/ryuki/Desktop/work/presentation-review-agent/backend/events/__init__.py`
+- `backend/events/__init__.py`
   - 上記ヘルパーの再エクスポート
 
 ### まだ未実装の項目

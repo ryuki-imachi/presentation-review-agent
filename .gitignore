@@ -11,8 +11,8 @@ amplify_outputs.d.ts
 .amplify/
 
 # Environment
-.env
-.env.local
+.env*
+!.env.example
 backend/.env
 
 # IDE
@@ -26,3 +26,20 @@ backend/.env
 __pycache__/
 *.pyc
 .venv/
+
+# Test audio data
+test-audio-data/
+
+# Credentials & keys
+*.pem
+*.key
+*.cert
+*.p12
+credentials.json
+secrets.json
+
+# Logs
+*.log
+
+# Assets
+assets/
