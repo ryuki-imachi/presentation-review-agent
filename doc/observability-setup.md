@@ -97,66 +97,72 @@ aws xray update-indexing-rule --name "Default" \
 ```typescript
 import * as logs from "aws-cdk-lib/aws-logs";
 
-// --- Observability: トレース配信 ---
+// --- Observability: ロググループ ---
 
-// トレース配信ソース（AgentCore Runtime → X-Ray）
-const traceSource = new logs.CfnDeliverySource(stack, "TraceSource", {
-  name: `${runtimeName}-traces-source`,
-  logType: "TRACES",
-  resourceArn: runtime.agentRuntimeArn,
-});
-
-// トレース配信先（X-Ray）
-const traceDest = new logs.CfnDeliveryDestination(stack, "TraceDest", {
-  name: `${runtimeName}-traces-dest`,
-  deliveryDestinationType: "XRAY",
-});
-
-// トレース配信を接続
-const traceDelivery = new logs.CfnDelivery(stack, "TraceDelivery", {
-  deliverySourceName: traceSource.ref,
-  deliveryDestinationArn: traceDest.attrArn,
-});
-traceDelivery.addDependency(traceSource);
-traceDelivery.addDependency(traceDest);
-
-// --- Observability: ログ配信 ---
-
-// ロググループ
-const logGroup = new logs.LogGroup(stack, "AgentLogGroup", {
+const logGroup = new logs.LogGroup(stack, "AgentCoreLogGroup", {
   logGroupName: `/aws/vendedlogs/bedrock-agentcore/${runtimeName}`,
   retention: logs.RetentionDays.ONE_MONTH,
   removalPolicy: cdk.RemovalPolicy.DESTROY,
 });
 
+// --- Observability: トレース配信 ---
+
+// トレース配信ソース（AgentCore Runtime → X-Ray）
+const traceSource = new logs.CfnDeliverySource(stack, "TracesDeliverySource", {
+  name: `${runtimeName}-traces`,
+  logType: "TRACES",
+  resourceArn: runtime.agentRuntimeArn,
+});
+
 // ログ配信ソース（AgentCore Runtime → CloudWatch Logs）
-const logSource = new logs.CfnDeliverySource(stack, "LogSource", {
-  name: `${runtimeName}-logs-source`,
+const logSource = new logs.CfnDeliverySource(stack, "LogsDeliverySource", {
+  name: `${runtimeName}-logs`,
   logType: "APPLICATION_LOGS",
   resourceArn: runtime.agentRuntimeArn,
 });
 
+// トレース配信先（X-Ray）
+const traceDestination = new logs.CfnDeliveryDestination(
+  stack, "TracesDeliveryDestination", {
+    name: `${runtimeName}-traces-dest`,
+    deliveryDestinationType: "XRAY",
+  },
+);
+
 // ログ配信先（CloudWatch Logs）
-const logDest = new logs.CfnDeliveryDestination(stack, "LogDest", {
-  name: `${runtimeName}-logs-dest`,
-  deliveryDestinationType: "CWL",
-  deliveryDestinationConfiguration: {
+const logDestination = new logs.CfnDeliveryDestination(
+  stack, "LogsDeliveryDestination", {
+    name: `${runtimeName}-logs-dest`,
+    deliveryDestinationType: "CWL",
     destinationResourceArn: logGroup.logGroupArn,
   },
-});
+);
 
-// ログ配信を接続
-const logDelivery = new logs.CfnDelivery(stack, "LogDelivery", {
-  deliverySourceName: logSource.ref,
-  deliveryDestinationArn: logDest.attrArn,
+// 配信接続: トレース → X-Ray
+const traceDelivery = new logs.CfnDelivery(stack, "TracesDelivery", {
+  deliverySourceName: traceSource.name!,
+  deliveryDestinationArn: traceDestination.attrArn,
+});
+traceDelivery.addDependency(traceSource);
+traceDelivery.addDependency(traceDestination);
+
+// 配信接続: ログ → CloudWatch Logs
+const logDelivery = new logs.CfnDelivery(stack, "LogsDelivery", {
+  deliverySourceName: logSource.name!,
+  deliveryDestinationArn: logDestination.attrArn,
 });
 logDelivery.addDependency(logSource);
-logDelivery.addDependency(logDest);
+logDelivery.addDependency(logDestination);
 
 // --- X-Ray 書き込み権限 ---
 runtime.addToRolePolicy(
   new iam.PolicyStatement({
-    actions: ["xray:PutTraceSegments", "xray:PutTelemetryRecords"],
+    actions: [
+      "xray:PutTraceSegments",
+      "xray:PutTelemetryRecords",
+      "xray:GetSamplingRules",
+      "xray:GetSamplingTargets",
+    ],
     resources: ["*"],
   }),
 );

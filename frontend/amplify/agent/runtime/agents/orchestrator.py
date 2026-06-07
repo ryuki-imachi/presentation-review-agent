@@ -21,32 +21,41 @@ from .content_analyzer import HAIKU_MODEL_ID as CONTENT_MODEL_ID, run_content_an
 
 logger = logging.getLogger(__name__)
 
-SONNET_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+SONNET_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
 
 MAX_TRANSCRIPT_LENGTH = 50_000
 
 ORCHESTRATOR_SYSTEM_PROMPT = """\
-あなたはプレゼンテーション分析のオーケストレーターです。
-文字起こしテキストを受け取り、以下の手順で分析を行ってください。
+あなたはプレゼンテーション指導の専門家です。
+音声特徴分析と内容分析の結果を統合し、
+発表者に役立つフィードバックレポートを作成してください。
 
 ## 手順
 1. まず speech_analyzer ツールを使って話し方を分析してください
 2. 次に content_analyzer ツールを使って内容を分析してください
 3. 両方の分析結果を統合し、最終レポートを作成してください
 
-## 統合のガイドライン
-- 話し方と内容の両方から重要な点を選んでください
-- 重複する指摘は統合してください
-- 良い点・改善点はそれぞれ 3-5 項目にまとめてください
-- サマリーは全体の総合評価として 2-3 文で記述してください
+## レポート構成
+1. 総合サマリ（2-3文）
+2. よかった点 Top 3-5（具体的に何が良かったか、数値的根拠）
+3. 改善点 Top 3-5（何が課題か、どう改善すればよいか）
+4. 詳細フィードバック
+
+トーン: 建設的でポジティブ。批判的にならず、
+成長をサポートする姿勢で。日本語で出力してください。
 
 ## 出力形式
 必ず以下の JSON 形式のみを最終回答として返してください。JSON 以外のテキストは含めないでください。
 ```json
 {
-  "summary": "全体の総合評価（2-3文）",
-  "strengths": ["良い点1", "良い点2", ...],
-  "improvements": ["改善点1", "改善点2", ...]
+  "summary": "総合サマリ",
+  "strengths": [
+    {"category": "カテゴリ", "description": "説明", "evidence": "根拠"}, ...
+  ],
+  "improvements": [
+    {"category": "カテゴリ", "issue": "問題点", "suggestion": "改善提案", "priority": "high/medium/low"}, ...
+  ],
+  "detailed_feedback": "詳細なフィードバック"
 }
 ```
 """
@@ -57,8 +66,9 @@ class OrchestratorResult:
     """Orchestrator の実行結果"""
 
     summary: str
-    strengths: list[str]
-    improvements: list[str]
+    strengths: list[dict]
+    improvements: list[dict]
+    detailed_feedback: str
     cost_summary: AgentExecutionCostSummary
 
 
@@ -147,8 +157,13 @@ async def run_orchestrator(transcript: str) -> OrchestratorResult:
     # --- JSON パース + 型正規化 ---
     parsed = _parse_json_response(str(result))
     summary = str(parsed.get("summary", "分析結果を取得できませんでした"))
-    strengths = _to_str_list(parsed.get("strengths", []))
-    improvements = _to_str_list(parsed.get("improvements", []))
+    strengths = parsed.get("strengths", [])
+    if strengths and isinstance(strengths[0], str):
+        strengths = [{"category": "", "description": s, "evidence": ""} for s in strengths]
+    improvements = parsed.get("improvements", [])
+    if improvements and isinstance(improvements[0], str):
+        improvements = [{"category": "", "issue": i, "suggestion": "", "priority": "medium"} for i in improvements]
+    detailed_feedback = str(parsed.get("detailed_feedback", ""))
 
     # --- コスト計算 ---
     usages: list[AgentTokenUsage] = []
@@ -168,5 +183,6 @@ async def run_orchestrator(transcript: str) -> OrchestratorResult:
         summary=summary,
         strengths=strengths,
         improvements=improvements,
+        detailed_feedback=detailed_feedback,
         cost_summary=cost_summary,
     )

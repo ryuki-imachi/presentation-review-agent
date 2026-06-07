@@ -36,8 +36,14 @@ def setup_logging(level: int = logging.INFO) -> None:
     root = logging.getLogger()
     root.setLevel(level)
 
-    # 既存ハンドラをクリア
+    # OTel が注入したハンドラを保護しつつ既存ハンドラを差し替え
+    otel_handlers = [
+        h for h in root.handlers
+        if type(h).__module__.startswith("opentelemetry")
+    ]
     root.handlers.clear()
+    for h in otel_handlers:
+        root.addHandler(h)
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())

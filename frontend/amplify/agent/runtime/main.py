@@ -198,6 +198,7 @@ async def invoke(payload: dict):
         transcript_s3_key=result.transcript_s3_key,
         strengths=orch_result.strengths,
         improvements=orch_result.improvements,
+        detailed_feedback=orch_result.detailed_feedback,
         agent_cost=orch_result.cost_summary,
     )
 

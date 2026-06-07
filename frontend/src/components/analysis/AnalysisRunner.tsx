@@ -59,12 +59,12 @@ function buildMarkdown(resultData: AnalysisResultData, runId: string | null): st
   lines.push("");
   lines.push("## 良い点");
   for (const s of resultData.strengths) {
-    lines.push(`- ${s}`);
+    lines.push(`- **${s.category}**: ${s.description}（${s.evidence}）`);
   }
   lines.push("");
   lines.push("## 改善点");
   for (const s of resultData.improvements) {
-    lines.push(`- ${s}`);
+    lines.push(`- **[${s.priority}] ${s.category}**: ${s.issue} → ${s.suggestion}`);
   }
   if (resultData.transcript) {
     lines.push("");

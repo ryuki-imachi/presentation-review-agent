@@ -101,8 +101,9 @@ def new_analysis_result_event(
     run_id: str,
     owner_sub: str,
     summary: str,
-    strengths: list[str],
-    improvements: list[str],
+    strengths: list[dict] | list[str],
+    improvements: list[dict] | list[str],
+    detailed_feedback: str = "",
     agent_cost: AgentExecutionCostSummary,
     file_name: str | None = None,
     file_path: str | None = None,
@@ -116,6 +117,7 @@ def new_analysis_result_event(
         "summary": summary,
         "strengths": strengths,
         "improvements": improvements,
+        "detailed_feedback": detailed_feedback,
         "agent_cost": agent_cost.to_dict(),
     }
     if file_name is not None:

@@ -59,6 +59,7 @@ export function createAgentRuntime({
       environmentVariables: {
         S3_BUCKET_NAME: bucket.bucketName,
         AWS_DEFAULT_REGION: stack.region,
+        OTEL_SERVICE_NAME: runtimeName,
       },
     },
   );

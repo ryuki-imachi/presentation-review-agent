@@ -57,10 +57,24 @@ export type AnalysisPartialEvent = BaseAnalysisEvent & {
   data?: AnalysisPartialData;
 };
 
+export type StrengthItem = {
+  category: string;
+  description: string;
+  evidence: string;
+};
+
+export type ImprovementItem = {
+  category: string;
+  issue: string;
+  suggestion: string;
+  priority: "high" | "medium" | "low";
+};
+
 export type AnalysisResultData = {
   summary: string;
-  strengths: string[];
-  improvements: string[];
+  strengths: StrengthItem[];
+  improvements: ImprovementItem[];
+  detailed_feedback: string;
   agent_cost: AgentExecutionCost;
   file_name?: string;
   file_path?: string;
@@ -148,16 +162,10 @@ export function isAnalysisEvent(value: unknown): value is AnalysisEvent {
     if (value.status !== "completed" || value.step !== "finalize") return false;
     if (!isRecord(value.data)) return false;
     if (typeof value.data.summary !== "string") return false;
-    if (
-      !Array.isArray(value.data.strengths) ||
-      !value.data.strengths.every((item) => typeof item === "string")
-    ) {
+    if (!Array.isArray(value.data.strengths)) {
       return false;
     }
-    if (
-      !Array.isArray(value.data.improvements) ||
-      !value.data.improvements.every((item) => typeof item === "string")
-    ) {
+    if (!Array.isArray(value.data.improvements)) {
       return false;
     }
 

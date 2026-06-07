@@ -35,8 +35,8 @@ test-audio-data/
 *.key
 *.cert
 *.p12
-credentials*
-secrets*
+credentials.json
+secrets.json
 
 # Logs
 *.log
